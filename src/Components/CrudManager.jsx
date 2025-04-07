@@ -19,7 +19,7 @@ const CrudManager = () => {
     gender: "",
     email: "",
     phone: "",
-    image: ""
+    image: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,7 +35,7 @@ const CrudManager = () => {
       gender: "Male",
       email: "john.doe@example.com",
       phone: "123-456-7890",
-      image: "https://via.placeholder.com/50"
+      image: "https://via.placeholder.com/50",
     },
     {
       _id: "2",
@@ -46,7 +46,7 @@ const CrudManager = () => {
       gender: "Female",
       email: "jane.smith@example.com",
       phone: "987-654-3210",
-      image: "https://via.placeholder.com/50"
+      image: "https://via.placeholder.com/50",
     },
     {
       _id: "3",
@@ -57,8 +57,8 @@ const CrudManager = () => {
       gender: "Male",
       email: "michael.johnson@example.com",
       phone: "555-123-4567",
-      image: "https://via.placeholder.com/50"
-    }
+      image: "https://via.placeholder.com/50",
+    },
   ];
 
   // Initial data loading removed - we'll handle this in the auth check useEffect
@@ -66,20 +66,20 @@ const CrudManager = () => {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      
+
       // Try to get data from API, fall back to mock data
       try {
         // Get token from localStorage
-        const token = localStorage.getItem('accessToken');
-        
+        const token = localStorage.getItem("accessToken");
+
         // Set up request with authentication header
         const config = {
-          headers: { Authorization: token ? `Bearer ${token}` : '' }
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
         };
-        
+
         // Make API call with authentication
         const response = await axios.get(API.tables.base, config);
-        
+
         if (response.data) {
           setRecords(response.data);
           console.log("Successfully fetched real data from API");
@@ -91,7 +91,7 @@ const CrudManager = () => {
         // Always fall back to mock data for demo purposes
         setRecords(mockRecords);
       }
-      
+
       setError(null);
     } catch (err) {
       console.error("Error fetching records:", err);
@@ -116,7 +116,7 @@ const CrudManager = () => {
         gender: "",
         email: "",
         phone: "",
-        image: ""
+        image: "",
       });
     }
     setIsEditing(true);
@@ -128,21 +128,21 @@ const CrudManager = () => {
         // Try API, fall back to frontend-only deletion
         try {
           // Get token from localStorage
-          const token = localStorage.getItem('accessToken');
-          
+          const token = localStorage.getItem("accessToken");
+
           // Set up request with authentication header
           const config = {
-            headers: { Authorization: token ? `Bearer ${token}` : '' }
+            headers: { Authorization: token ? `Bearer ${token}` : "" },
           };
-          
+
           // Make API call with authentication
           await axios.delete(API.tables.delete(id), config);
         } catch (apiError) {
           console.warn("API error, performing client-side delete:", apiError);
         }
-        
+
         // Always update UI even if API fails
-        setRecords(records.filter(record => record._id !== id));
+        setRecords(records.filter((record) => record._id !== id));
         alert("Record deleted successfully!");
       } catch (err) {
         console.error("Error deleting record:", err);
@@ -155,53 +155,65 @@ const CrudManager = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       // Get token from localStorage
-      const token = localStorage.getItem('accessToken');
-      
+      const token = localStorage.getItem("accessToken");
+
       // Set up request with authentication header
       const config = {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
       };
-      
+
       if (selectedRecord) {
         // Editing existing record
         try {
-          await axios.patch(API.tables.update(selectedRecord._id), formData, config);
+          await axios.patch(
+            API.tables.update(selectedRecord._id),
+            formData,
+            config
+          );
         } catch (apiError) {
           console.warn("API error, performing client-side update:", apiError);
         }
-        
+
         // Always update UI even if API fails
-        setRecords(records.map(record => 
-          record._id === selectedRecord._id ? { ...formData, _id: selectedRecord._id } : record
-        ));
+        setRecords(
+          records.map((record) =>
+            record._id === selectedRecord._id
+              ? { ...formData, _id: selectedRecord._id }
+              : record
+          )
+        );
         alert("Record updated successfully!");
       } else {
         // Creating new record
         let newRecord = { ...formData };
-        
+
         try {
-          const response = await axios.post(API.tables.create, formData, config);
+          const response = await axios.post(
+            API.tables.create,
+            formData,
+            config
+          );
           newRecord = response.data;
         } catch (apiError) {
           console.warn("API error, creating client-side record:", apiError);
           // Generate fake _id for frontend-only record
           newRecord._id = Date.now().toString();
         }
-        
+
         // Always update UI even if API fails
         setRecords([...records, newRecord]);
         alert("Record created successfully!");
       }
-      
+
       // Reset form and exit editing mode
       setFormData({
         id: "",
@@ -211,7 +223,7 @@ const CrudManager = () => {
         gender: "",
         email: "",
         phone: "",
-        image: ""
+        image: "",
       });
       setSelectedRecord(null);
       setIsEditing(false);
@@ -232,23 +244,23 @@ const CrudManager = () => {
       gender: "",
       email: "",
       phone: "",
-      image: ""
+      image: "",
     });
   };
 
   // Check if user is logged in and handle data loading
   useEffect(() => {
     console.log("CRUD component mounted, checking login status");
-    
+
     // Redirect to login if not logged in
-    if (localStorage.getItem('isLoggedIn') !== 'true') {
+    if (localStorage.getItem("isLoggedIn") !== "true") {
       console.log("Not logged in, redirecting to login");
-      navigate('/login');
+      navigate("/login");
       return;
     }
-    
+
     console.log("User is logged in, fetching records");
-    
+
     // If we're logged in, ensure we fetch records
     const loadData = async () => {
       try {
@@ -257,14 +269,14 @@ const CrudManager = () => {
         console.error("Error loading initial data:", error);
       }
     };
-    
+
     loadData();
   }, [navigate]);
 
   // FORCE MANAGER MODE FOR TESTING
   const isManager = true;
   console.log("FORCED MANAGER MODE ENABLED");
-  
+
   // Display loading indicator while records are being fetched
   if (loading) {
     return (
@@ -278,14 +290,16 @@ const CrudManager = () => {
   return (
     <div className="dashboard-container">
       <h1>CRUD Manager</h1>
-      
+
       {isEditing ? (
         <div className="dashboard-section form-section">
           <div className="section-header">
             <h2>{selectedRecord ? "Edit Record" : "Create New Record"}</h2>
-            <button className="close-form-button" onClick={handleCancel}>✕</button>
+            <button className="close-form-button" onClick={handleCancel}>
+              ✕
+            </button>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="form-container">
             <div className="form-row">
               <div className="form-field">
@@ -300,7 +314,7 @@ const CrudManager = () => {
                   required
                 />
               </div>
-              
+
               <div className="form-field">
                 <label htmlFor="firstName">First Name</label>
                 <input
@@ -314,7 +328,7 @@ const CrudManager = () => {
                 />
               </div>
             </div>
-            
+
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="lastName">Last Name</label>
@@ -328,7 +342,7 @@ const CrudManager = () => {
                   required
                 />
               </div>
-              
+
               <div className="form-field">
                 <label htmlFor="age">Age</label>
                 <input
@@ -344,7 +358,7 @@ const CrudManager = () => {
                 />
               </div>
             </div>
-            
+
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="gender">Gender</label>
@@ -361,7 +375,7 @@ const CrudManager = () => {
                   <option value="Other">Other</option>
                 </select>
               </div>
-              
+
               <div className="form-field">
                 <label htmlFor="email">Email</label>
                 <input
@@ -375,7 +389,7 @@ const CrudManager = () => {
                 />
               </div>
             </div>
-            
+
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="phone">Phone</label>
@@ -388,7 +402,7 @@ const CrudManager = () => {
                   placeholder="Phone Number"
                 />
               </div>
-              
+
               <div className="form-field">
                 <label htmlFor="image">Image URL</label>
                 <input
@@ -401,15 +415,15 @@ const CrudManager = () => {
                 />
               </div>
             </div>
-            
+
             <div className="form-actions">
               <button type="submit" className="submit-button">
                 {selectedRecord ? "Update Record" : "Create Record"}
               </button>
-              
-              <button 
-                type="button" 
-                className="cancel-button" 
+
+              <button
+                type="button"
+                className="cancel-button"
                 onClick={handleCancel}
               >
                 Cancel
@@ -423,30 +437,27 @@ const CrudManager = () => {
             <h2>Records Management</h2>
             <div className="section-actions">
               {isManager && (
-                <button 
-                  className="create-record-button" 
+                <button
+                  className="create-record-button"
                   onClick={() => handleEdit(null)}
                 >
                   + Create New Record
                 </button>
               )}
-              <button 
-                className="refresh-button" 
-                onClick={fetchRecords}
-              >
+              <button className="refresh-button" onClick={fetchRecords}>
                 ↻ Refresh
               </button>
             </div>
           </div>
-          
+
           {error && <div className="error-message">{error}</div>}
-          
+
           {records.length === 0 ? (
             <div className="no-records">
               <p>No records found in the database.</p>
               {isManager && (
-                <button 
-                  className="create-record-button" 
+                <button
+                  className="create-record-button"
                   onClick={() => handleEdit(null)}
                 >
                   + Create First Record
@@ -480,12 +491,12 @@ const CrudManager = () => {
                       <td>
                         <img
                           src={record.image}
-                          alt={`${record.firstName} ${record.lastName}`}
+                          alt="profile"
                           width="50"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/50";
-                          }}
+                          // onError={(e) => {
+                          //   e.target.onerror = null;
+                          //   e.target.src = "/src/assets/default-avatar.png"; // Use your actual image path
+                          // }}
                         />
                       </td>
                       <td className="actions">
