@@ -1,67 +1,54 @@
-// src/App.js
-import React from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import RegisterPage from "./Components/Auth/RegisterPage";
-import UnauthorizedPage from "./Components/Auth/UnauthorizedPage";
-import NavBar from "./Components/NavBar";
+// src/App.jsx
+import React, { useState } from "react";
+import FormComponent from "./Components/TableComponent/FormComponent";
+import TableComponent from "./Components/TableComponent/TableComponent";
+import LoginComponent from "../src/Components/LoginComponent";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./App.css";
-import LoginPage from "./Components/Auth/LoginPage";
-import { AuthProvider } from "./context/AuthContext";
-import CrudManager from "./Components/CrudManager";
+const AppContent = () => {
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const { user, logout, isManager } = useAuth();
 
-const App = () => {
-  // No longer clearing login state on initial app load
-  // This allows persistent login across page refreshes
-  
-  // Create a wrapper component for auth-protected routes
-  const ProtectedRoute = ({ children }) => {
-    // Check if logged in
-    if (localStorage.getItem('isLoggedIn') !== 'true') {
-      // Redirect to login page if not logged in
-      return <Navigate to="/login" />;
-    }
-    
-    // Render the protected component if logged in
-    return children;
+  const handleEdit = (record) => {
+    setSelectedRecord(record);
   };
 
+  const handleFormSubmit = () => {
+    setSelectedRecord(null);
+  };
+
+  if (!user) {
+    return <LoginComponent />;
+  }
+
+  return (
+    <div className="App">
+      <header>
+        <h1>CRUD Application</h1>
+        <div className="user-info">
+          <span>
+            Logged in as: {user.username} ({user.role})
+          </span>
+          <button onClick={logout}>Logout</button>
+        </div>
+      </header>
+
+      {isManager() && (
+        <FormComponent
+          selectedRecord={selectedRecord}
+          onFormSubmit={handleFormSubmit}
+        />
+      )}
+
+      <TableComponent handleEdit={handleEdit} showActions={isManager()} />
+    </div>
+  );
+};
+
+const App = () => {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <NavBar />
-          <div className="content">
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/unauthorized" element={<UnauthorizedPage />} />
-              <Route 
-                path="/crud" 
-                element={
-                  <ProtectedRoute>
-                    <CrudManager />
-                  </ProtectedRoute>
-                } 
-              />
-
-              {/* Always redirect to login */}
-              <Route 
-                path="/" 
-                element={<Navigate to="/login" replace />} 
-              />
-
-              {/* Catch all route for 404 */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </div>
-        </div>
-      </Router>
+      <AppContent />
     </AuthProvider>
   );
 };

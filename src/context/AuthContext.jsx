@@ -1,13 +1,13 @@
-// src/context/AuthContext.js
-import React, { createContext, useState, useEffect } from "react";
+// src/context/AuthContext.jsx
+import React, { createContext, useState, useContext, useEffect } from "react";
 import axios from "axios";
 
-export const AuthContext = createContext();
+const AuthContext = createContext();
 
-const API_URL = "http://localhost:9000/api/auth";
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(
     localStorage.getItem("accessToken") || null
   );
@@ -15,143 +15,64 @@ export const AuthProvider = ({ children }) => {
     localStorage.getItem("refreshToken") || null
   );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Set up axios interceptor for token refresh
-    const setupAxiosInterceptors = () => {
-      axios.interceptors.response.use(
-        (response) => response,
-        async (error) => {
-          const originalRequest = error.config;
-
-          // If error is 401 (Unauthorized) and we haven't tried to refresh token yet
-          if (
-            error.response?.status === 401 &&
-            !originalRequest._retry &&
-            refreshToken
-          ) {
-            originalRequest._retry = true;
-
-            try {
-              const response = await axios.post(`${API_URL}/refresh-token`, {
-                refreshToken,
-              });
-              const newAccessToken = response.data.accessToken;
-
-              localStorage.setItem("accessToken", newAccessToken);
-              setAccessToken(newAccessToken);
-
-              // Update the authorization header with the new token
-              axios.defaults.headers.common[
-                "Authorization"
-              ] = `Bearer ${newAccessToken}`;
-              originalRequest.headers[
-                "Authorization"
-              ] = `Bearer ${newAccessToken}`;
-
-              return axios(originalRequest);
-            } catch (refreshError) {
-              // If refresh token fails, logout user
-              logout();
-              return Promise.reject(refreshError);
-            }
-          }
-
-          return Promise.reject(error);
-        }
-      );
-    };
-
-    setupAxiosInterceptors();
-
-    // Check if user is authenticated
-    const verifyUser = async () => {
-      if (!accessToken) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Set default authorization header
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${accessToken}`;
-
-        // Optionally fetch user profile if you have an endpoint for that
-        // const response = await axios.get(`${API_URL}/profile`);
-        // setCurrentUser(response.data);
-
-        // For now, we'll just assume the token is valid if it exists
-        setCurrentUser({ isAuthenticated: true });
-        setLoading(false);
-      } catch (error) {
-        setError(error);
-        setLoading(false);
-      }
-    };
-
-    verifyUser();
-  }, [accessToken, refreshToken]);
-
-  const register = async (userData) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await axios.post(`${API_URL}/register`, userData);
-
-      const { accessToken, refreshToken, user } = response.data;
-
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      setCurrentUser(user);
-
-      // Set default authorization header
-      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-
-      setLoading(false);
-      return { success: true, user };
-    } catch (error) {
-      setError(error.response?.data?.message || "Registration failed");
-      setLoading(false);
-      return {
-        success: false,
-        error: error.response?.data?.message || "Registration failed",
-      };
+    // Try to get user info from local storage on initial load
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
     }
-  };
+    setLoading(false);
+  }, []);
+
+  // Update localStorage when tokens change
+  useEffect(() => {
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+      // Configure axios to use the token for all requests
+      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+    } else {
+      localStorage.removeItem("accessToken");
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    } else {
+      localStorage.removeItem("refreshToken");
+    }
+  }, [refreshToken]);
+
+  // Save user to localStorage when it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+  }, [user]);
 
   const login = async (username, password) => {
     try {
-      setLoading(true);
-      setError(null);
+      const response = await axios.post(
+        "http://localhost:9000/api/auth/login",
+        {
+          username,
+          password,
+        }
+      );
 
-      const response = await axios.post(`${API_URL}/login`, {
-        username,
-        password,
-      });
+      const { user, accessToken, refreshToken } = response.data;
 
-      const { accessToken, refreshToken, user } = response.data;
-
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-
+      setUser(user);
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
-      setCurrentUser(user);
 
-      // Set default authorization header
-      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-
-      setLoading(false);
       return { success: true, user };
     } catch (error) {
-      setError(error.response?.data?.message || "Login failed");
-      setLoading(false);
+      console.error("Login error:", error);
       return {
         success: false,
         error: error.response?.data?.message || "Login failed",
@@ -162,36 +83,65 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       if (refreshToken) {
-        // Call the logout API to invalidate the refresh token
-        await axios.post(`${API_URL}/logout`, { refreshToken });
+        await axios.post("http://localhost:9000/api/auth/logout", {
+          refreshToken,
+        });
       }
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("Logout error:", error);
     } finally {
-      // Clear tokens and user data regardless of API success
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-
+      setUser(null);
       setAccessToken(null);
       setRefreshToken(null);
-      setCurrentUser(null);
-
-      // Remove authorization header
-      delete axios.defaults.headers.common["Authorization"];
     }
   };
 
-  const value = {
-    currentUser,
-    loading,
-    error,
-    register,
-    login,
-    logout,
-    isAuthenticated: !!currentUser,
+  const refreshAccessToken = async () => {
+    if (!refreshToken) return false;
+
+    try {
+      const response = await axios.post(
+        "http://localhost:9000/api/auth/refresh-token",
+        {
+          refreshToken,
+        }
+      );
+
+      setAccessToken(response.data.accessToken);
+      return true;
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      // If refresh fails, log the user out
+      logout();
+      return false;
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const isManager = () => {
+    return user?.role === "manager";
+  };
+
+  const isEmployee = () => {
+    return user?.role === "employee";
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        refreshToken,
+        loading,
+        login,
+        logout,
+        refreshAccessToken,
+        isManager,
+        isEmployee,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;
